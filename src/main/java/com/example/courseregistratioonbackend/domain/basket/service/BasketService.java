@@ -10,7 +10,7 @@ import com.example.courseregistratioonbackend.domain.course.entity.Course;
 import com.example.courseregistratioonbackend.domain.course.exception.CourseNotFoundException;
 import com.example.courseregistratioonbackend.domain.course.repository.CourseRepository;
 import com.example.courseregistratioonbackend.domain.student.entity.Student;
-import com.example.courseregistratioonbackend.domain.student.execption.StudentNotFoundException;
+import com.example.courseregistratioonbackend.domain.student.exception.StudentNotFoundException;
 import com.example.courseregistratioonbackend.domain.student.repository.StudentRepository;
 import com.example.courseregistratioonbackend.global.enums.SuccessCode;
 import com.example.courseregistratioonbackend.global.parsing.entity.Belong;
@@ -38,6 +38,7 @@ public class BasketService {
 	private final CourseRepository courseRepository;
 
 	// 장바구니 조회 메서드
+	@Transactional(readOnly = true)
 	public List<CourseFromBasketResponseDto> getCourseListFromBasket(Long studentId) {
 
 		return basketRepository.findByStudentId(studentId).stream()
@@ -45,12 +46,9 @@ public class BasketService {
 				// 사용자에 해당하는 장바구니 내역을 하나씩 찾아옴
 				basketItem -> {
 
-					// 각 내역에서 강의를 찾아옴.
-					Long courseId = basketItem.getCourse().getId();
-
-					Course course = courseRepository.findById(courseId).orElseThrow(
-						() -> new CourseNotFoundException(COURSE_NOT_FOUND)
-					);
+					// 강의 정보
+					Course course = basketItem.getCourse();
+					Long courseId = course.getId();
 
 					// 강의에 대한 다른 테이블항목
 					Belong belong = course.getBelong();
@@ -61,6 +59,7 @@ public class BasketService {
 					String collegeName = belong.getCollege() != null ? belong.getCollege().getCollegeNM() : null;
 					String departmentName = belong.getDepartment() != null ? belong.getDepartment().getDepartNM() : null;
 					String majorName = belong.getMajor() != null ? belong.getMajor().getMajorNM() : null;
+					String professorName = professor != null ? professor.getProfessorNM() : null;
 
 					// 찾아온 강의와 다른 테이블 항목을 통해 빌더로 ResponseDto 생성
 					return CourseFromBasketResponseDto.builder()
@@ -74,7 +73,7 @@ public class BasketService {
 						.division(course.getDivision())
 						.subjectName(subject.getSubjectNM())
 						.credit(course.getCredit())
-						.professorName(professor.getProfessorNM())
+						.professorName(professorName)
 						.timetable(course.getTimetable())
 						.limitation(course.getLimitation())
 						.numberOfBasket(course.getBasket())

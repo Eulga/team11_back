@@ -3,28 +3,27 @@ package com.example.courseregistratioonbackend.domain.student.service;
 import com.example.courseregistratioonbackend.domain.course.entity.QCourse;
 import com.example.courseregistratioonbackend.domain.registration.entity.QRegistration;
 import com.example.courseregistratioonbackend.domain.registration.entity.Registration;
-import com.example.courseregistratioonbackend.domain.registration.repository.RegistrationRepository;
 import com.example.courseregistratioonbackend.domain.student.dto.StudentInfoDto;
 import com.example.courseregistratioonbackend.domain.student.dto.TimetableResponseDto;
 import com.example.courseregistratioonbackend.domain.student.entity.Student;
-import com.example.courseregistratioonbackend.domain.student.execption.StudentNotFoundException;
+import com.example.courseregistratioonbackend.domain.student.exception.StudentNotFoundException;
 import com.example.courseregistratioonbackend.domain.student.repository.StudentRepository;
 import com.example.courseregistratioonbackend.global.parsing.entity.QSubject;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.example.courseregistratioonbackend.global.enums.ErrorCode.STUDENT_NOT_FOUND;
 
 @RequiredArgsConstructor
 @Service
+@Transactional(readOnly = true)
 public class StudentService {
     private final StudentRepository studentRepository;
-    private final RegistrationRepository registrationRepository;
     private final JPAQueryFactory queryFactory;
 
     // 시간표 조회
@@ -44,7 +43,7 @@ public class StudentService {
                 .where(qRegistration.student.eq(student))
                 .fetch();
 
-        List<TimetableResponseDto> timetableResponseDtoList =  registrationList.stream()
+        return registrationList.stream()
                 .map(registration -> {
                     String courseNM = registration.getCourse().getSubject().getSubjectNM();
                     String[] timetableStrList = registration.getCourse().getTimetable().split(",");
@@ -54,8 +53,7 @@ public class StudentService {
                     }
                     return new TimetableResponseDto(courseNM, timetable);
                 })
-                .collect(Collectors.toList());
-        return timetableResponseDtoList;
+                .toList();
     }
 
 

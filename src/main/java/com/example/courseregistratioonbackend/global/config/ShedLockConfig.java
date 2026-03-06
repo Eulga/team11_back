@@ -14,7 +14,7 @@ import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
 @Configuration
 @EnableScheduling
 @EnableSchedulerLock(defaultLockAtMostFor = "60s")
-public class shedLockConfig {
+public class ShedLockConfig {
 
 	@Bean
 	public LockProvider lockProvider(DataSource dataSource) {

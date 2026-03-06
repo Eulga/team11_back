@@ -11,7 +11,7 @@ import com.example.courseregistratioonbackend.domain.registration.exception.*;
 import com.example.courseregistratioonbackend.domain.registration.repository.RedisRepository;
 import com.example.courseregistratioonbackend.domain.registration.repository.RegistrationRepository;
 import com.example.courseregistratioonbackend.domain.student.entity.Student;
-import com.example.courseregistratioonbackend.domain.student.execption.StudentNotFoundException;
+import com.example.courseregistratioonbackend.domain.student.exception.StudentNotFoundException;
 import com.example.courseregistratioonbackend.domain.student.repository.StudentRepository;
 import com.example.courseregistratioonbackend.global.enums.SuccessCode;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.example.courseregistratioonbackend.global.enums.ErrorCode.*;
 import static com.example.courseregistratioonbackend.global.enums.SuccessCode.REGISTRATION_DELETE_SUCCESS;
@@ -81,6 +82,7 @@ public class RegistrationService {
         return REGISTRATION_DELETE_SUCCESS;
     }
 
+    @Transactional(readOnly = true)
     public List<RegistrationResponseDto> getRegistration(Long studentId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new StudentNotFoundException(STUDENT_NOT_FOUND));
@@ -130,13 +132,12 @@ public class RegistrationService {
     private void checkTimetable(String currentTimetable, List<Registration> registrations) {
         if (!registrations.isEmpty()) { // 수강신청 목록이 있다면
             // 강의 시간이 겹치는 지 확인
-            StringBuilder sb = new StringBuilder();
-            for (Registration r : registrations) {
-                sb.append(r.getCourse().getTimetable());
-                sb.append(",");
-            }
+            String registeredTimetable = registrations.stream()
+                    .map(registration -> registration.getCourse().getTimetable())
+                    .collect(Collectors.joining(","));
+
             int[] timetableOfCourse = makeIntTimetable(currentTimetable);
-            int[] timetableOfStudent = makeIntTimetable(sb.toString());
+            int[] timetableOfStudent = makeIntTimetable(registeredTimetable);
             compareTimetable(timetableOfCourse, timetableOfStudent);
         }
     }
@@ -146,9 +147,17 @@ public class RegistrationService {
         enum DayOfWeek { 월, 화, 수, 목, 금, 토, 일 }
         int[] timetable = new int[7];
         for (String t : rawTimetable.split(",")) {
+            if (t.isBlank()) {
+                continue;
+            }
+
             int i = DayOfWeek.valueOf(t.substring(0, 1)).ordinal();
-            String[] periods = t.substring(2).split(" ");
+            String[] periods = t.substring(2).trim().split(" ");
             for (String period : periods) {
+                if (period.isBlank()) {
+                    continue;
+                }
+
                 // 비트마스크 사용해 period 번째 비트에 1표시
                 int p = 1 << Integer.parseInt(period);
                 timetable[i] |= p;
